@@ -1,3 +1,5 @@
+library(dplyr)
+
 #load data from test an merge in a data set
 test.x <- read.table("./UCI HAR Dataset/test/X_test.txt")
 test.y <- read.table("./UCI HAR Dataset/test/y_test.txt")
