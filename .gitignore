@@ -4,6 +4,7 @@
 *.jpeg
 *.jpg
 *.png
+*.txt
 .Rproj.user
 .Rhistory
 .RData
