@@ -5,6 +5,7 @@
 *.jpg
 *.png
 *.txt
+*.rds
 .Rproj.user
 .Rhistory
 .RData
