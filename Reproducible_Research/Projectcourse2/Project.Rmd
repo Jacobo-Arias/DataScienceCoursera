@@ -1,0 +1,178 @@
+---
+title: Meteorological events with the greatest consequence on the health of the population
+  and economic consequences shown by state
+author: "Jacobo Arias"
+date: "22/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Synopsis
+
+
+In this project, the analysis of which climatic event had a greater impact on population health was carried out, treating injuries and fatalities as one, then it was analyzed which climatic event causes the greatest economic consequences and later with the results a comparison was made by states for that climatic cause whose number was higher in both cases.
+
+
+In this project data between 1950 and 2011 were used
+
+
+## Data Processing
+
+
+The first thing is to load the data and the library dplyr an ggplot2
+```{r, message=FALSE}
+library(dplyr)
+library(ggplot2)
+data <- read.csv("repdata_data_StormData.csv")
+```
+
+
+### Population health
+
+
+Since all the columns are not necessary for the analyzes for this first part, the column of the EVTYPE event and the sum of INJURIES and FATALITIES were used.
+
+
+They were grouped by the type of event and the sum was made to be able to see to which event the greatest impact on population health was attributed.
+```{r, message=FALSE}
+event <- data$EVTYPE
+populationHealth <- data$INJURIES + data$FATALITIES
+
+harmful <- data.frame(event,populationHealth)
+harmful <- harmful %>% group_by(event) %>% 
+        summarize(Affectations = sum(populationHealth))
+as.character(harmful[which.max(harmful$Affectations),][[1]])
+```
+TORNADO being the most harmful event in population health problems.
+
+
+### Economic consequences
+
+
+For this part only was necessary the columns EVTYPE as event, PROPDMG as damage and PROPDMGXP as label, the last one is an alphabetical characters used to signify magnitude include “K” for thousands, “M” for millions, and “B” for billions 
+
+```{r, message=FALSE}
+damage <- data$PROPDMG
+label <- data$PROPDMGEXP
+
+cost <- data.frame(event,damage,label)
+```
+
+By having it already in a dataframe, what is done is to group them by the event and the label and add the total of values, later they are passed to integer values multiplying the value of damage by what refers to their label (K is 10³, M is 10⁶ and B is 10⁹), and those that do not have a label are taken as the final value
+
+```{r, message=FALSE}
+cost <- cost %>% group_by(event,label) %>% summarise(total = sum(damage))
+cost <- cost[cost$total>0,]
+
+for (i in 1:dim(cost)[1]){
+        if(cost[i,2] =='K'){
+                cost[i,3] <- cost[i,3] * 1000
+        }
+        if(cost[i,2] =='M'){
+                cost[i,3] <- cost[i,3] * 1000000
+        }
+        if(cost[i,2] =='B'){
+                cost[i,3] <- cost[i,3] * 1000000000
+        }
+        else {
+                cost[i,3] <- cost[i,3]
+        }
+}
+```
+Once these values are obtained, the label column is eliminated and grouped by event so that in this way the total costs are added and it can be obtained which is the highest
+```{r, message=FALSE}
+cost <- data.frame(cost$event,cost$total)
+colnames(cost) <- c("event","total")
+cost <- cost %>% group_by(event) %>% summarise(total = sum(total))
+
+as.character(cost[which.max(cost$total),][[1]])
+```
+Giving the FLOOD as the event with the greatest economic consequence
+
+
+## Comparison by states
+
+
+### TORNADO
+
+
+From all the data, only those that the event type is TORNADO are taken and the same previous procedure is carried out replacing the "event" by "state"
+```{r, message=FALSE}
+TORNADO <- data[data$EVTYPE == "TORNADO", ] 
+
+state <- TORNADO$STATE
+populationHealth <- TORNADO$INJURIES + TORNADO$FATALITIES
+
+harmful <- data.frame(state,populationHealth)
+harmful <- harmful %>% group_by(state) %>% 
+        summarize(Affectations = sum(populationHealth))
+harmful$state <- as.character(harmful$state)
+harmful <- harmful[harmful$Affectations > 0 ,]
+as.character(harmful[which.max(harmful$Affectations),])
+```
+As a result, TX, Texas has been the state most affected by TORNADO in population health, presenting 8745 cases
+
+Below is the graph showing the comparison by state
+```{r fig1, fig.height= 3, fig.width = 7}
+qplot(state,Affectations, data = harmful, xlab = "State", ylab = "Affectations")
+```
+
+
+It can be seen that the second most affected state is AL with 8546 cases
+
+
+### FLOOD
+
+
+Similar to TORNADO, only those whose event is FLOOD are taken from all the data and the same procedure is performed replacing the "event" by "state"
+```{r, message=FALSE}
+FLOOD <- data[data$EVTYPE == "FLOOD",]
+
+damage <- FLOOD$PROPDMG
+label <- FLOOD$PROPDMGEXP
+state <- FLOOD$STATE
+
+cost <- data.frame(state,damage,label)
+
+cost <- cost %>% group_by(state,label) %>% summarise(total = sum(damage))
+cost <- cost[cost$total>0,]
+
+for (i in 1:dim(cost)[1]){
+        if(cost[i,2] =='K'){
+                cost[i,3] <- cost[i,3] * 1000
+        }
+        if(cost[i,2] =='M'){
+                cost[i,3] <- cost[i,3] * 1000000
+        }
+        if(cost[i,2] =='B'){
+                cost[i,3] <- cost[i,3] * 1000000000
+        }
+        else {
+                cost[i,3] <- cost[i,3]
+        }
+}
+
+cost <- data.frame(cost$state,cost$total)
+colnames(cost) <- c("state","total")
+cost <- cost %>% group_by(state) %>% summarise(total = sum(total))
+cost$state <- as.character(cost$state)
+as.character(cost[which.max(cost$total),])
+```
+
+Resulting in that the state of CA has been the state with the greatest economic consequences due to FLOOD with a total of $ 116,751'420,000
+```{r fig2, fig.height= 3, fig.width = 7}
+qplot(state,total, data = cost, xlab = "State", ylab = "Dolars")   
+```
+
+
+Difference from how it happened with TORNADO, with FLOOD if you see a very large distance
+
+## Results
+
+
+Between 1950 and 2011, the most damaging event with respect to the health of the population was TORNADO, with Texas being the most affected state in all this time with a total of 8,745 cases followed by Alabama with 8,546 cases.
+
+In turn, the event with the greatest economic consequences was FLOOD, California being the most affected state with a total of $ 116,751'420,000 dollars.
