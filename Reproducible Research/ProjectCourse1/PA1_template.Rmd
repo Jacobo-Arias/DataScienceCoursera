@@ -1,0 +1,119 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+## Loading and preprocessing the data
+```{r, message=FALSE, echo=FALSE}
+library(dplyr)
+library(lubridate)
+library(lattice)
+
+files <- list.files()
+if (!("activity.csv" %in% files)){
+        unzip("activity.zip")
+        print("hola")
+}
+rm(files)
+knitr::opts_chunk$set(message = FALSE)
+```
+```{r}
+data <- read.csv("activity.csv");
+head(data)
+```
+
+## What is mean total number of steps taken per day?
+```{r, message=FALSE}
+steps_by_day <- data %>% group_by(date) %>% 
+        summarise(date = unique(date),total_steps = sum(steps,na.rm = T))
+hist(steps_by_day$total_steps)
+```
+
+Mean of the steps by day
+```{r}
+mean(steps_by_day$total_steps)
+```
+
+Median
+```{r}
+median(steps_by_day$total_steps)
+```
+
+## What is the average daily activity pattern?
+```{r, message=FALSE}
+avg_interval <- data %>% group_by(interval) %>% 
+        summarise(interval = unique(interval),mean_steps = mean(steps,na.rm = T))
+plot(avg_interval, type = 'l')
+```
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r}
+avg_interval[which.max(avg_interval$mean_steps),]$interval
+```
+is the interval number **835**
+
+## Imputing missing values
+```{r}
+table(is.na(data$steps))[[2]]
+```
+There are **2304** missing values
+
+
+The strategy is input the mean for that 5-minute interval
+
+```{r}
+datafull <- data
+for(i in 1:nrow(data)){
+        if (is.na(datafull[i,]$steps)){
+                datafull[i,]$steps <- avg_interval[i,]$mean_steps
+        }
+}
+head(datafull)
+```
+```{r, message=FALSE}
+steps_by_day <- datafull %>% group_by(date) %>% 
+        summarise(date = unique(date),total_steps = sum(steps,na.rm = T))
+hist(steps_by_day$total_steps)
+```
+
+Mean of the steps by day
+```{r}
+mean(steps_by_day$total_steps)
+```
+
+Median
+```{r}
+median(steps_by_day$total_steps)
+```
+
+*Do these values differ from the estimates from the first part of the assignment? 
+
+Yes, there is an increase in the mean and median, in addition to some intervals of the histogram
+
+## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+datafull$date <- as.Date(datafull$date)
+datafull <- mutate(datafull,week_time = ifelse(wday(date) %in% c(1,2),"weekend","weekday"))
+week <- split(datafull, datafull$week_time)
+weekend <- week[[2]]
+weekday <- week[[1]]
+```
+
+Weekend: 
+```{r}
+weekend_interval <- weekend %>% group_by(interval) %>% 
+        summarise(interval = unique(interval),mean_steps = mean(steps,na.rm = T))
+plot(weekend_interval, type = 'l', main = "Weekend")
+```
+
+
+Weekday: 
+```{r}
+weekday_interval <- weekday %>% group_by(interval) %>% 
+        summarise(interval = unique(interval),mean_steps = mean(steps,na.rm = T))
+plot(weekday_interval, type = 'l', main = "Weekday")
+```
